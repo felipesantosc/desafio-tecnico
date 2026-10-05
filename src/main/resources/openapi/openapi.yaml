@@ -1,0 +1,183 @@
+openapi: 3.0.3
+info:
+  title: Desafio Técnico - Coupon API
+  description: API para gerenciamento de cupons de desconto (contract first).
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Ambiente local
+tags:
+  - name: Coupon
+    description: Operações de cupons
+
+paths:
+  /coupon:
+    post:
+      tags: [Coupon]
+      summary: Cria um novo cupom
+      operationId: createCoupon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+      responses:
+        '201':
+          description: Cupom criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /coupon/{id}:
+    parameters:
+      - $ref: '#/components/parameters/CouponId'
+    get:
+      tags: [Coupon]
+      summary: Busca um cupom pelo id
+      operationId: getCouponById
+      responses:
+        '200':
+          description: Cupom encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponResponse'
+        '400':
+          $ref: '#/components/responses/InvalidId'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Coupon]
+      summary: Remove (soft delete) um cupom pelo id
+      operationId: deleteCoupon
+      responses:
+        '204':
+          description: Cupom removido com sucesso
+        '400':
+          $ref: '#/components/responses/InvalidId'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    CouponId:
+      name: id
+      in: path
+      required: true
+      description: Identificador do cupom
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    CouponRequest:
+      type: object
+      required: [code, description, discountValue, expirationDate]
+      properties:
+        code:
+          type: string
+          description: Código do cupom
+          example: ABC-123
+        description:
+          type: string
+          minLength: 1
+          example: Cupom de boas-vindas
+        discountValue:
+          type: number
+          minimum: 0.5
+          example: 0.8
+        expirationDate:
+          type: string
+          format: date-time
+          description: Data de expiração (não pode estar no passado)
+          example: '2030-12-31T23:59:59Z'
+        published:
+          type: boolean
+          default: false
+          example: false
+
+    CouponResponse:
+      type: object
+      required: [id, code, description, discountValue, expirationDate, status, published, redeemed]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: ABC123
+        description:
+          type: string
+        discountValue:
+          type: number
+        expirationDate:
+          type: string
+          format: date-time
+          example: '2030-12-31T23:59:59Z'
+        status:
+          $ref: '#/components/schemas/CouponStatus'
+        published:
+          type: boolean
+        redeemed:
+          type: boolean
+
+    CouponStatus:
+      type: string
+      enum: [ACTIVE, DELETED, INACTIVE]
+
+    ErrorResponse:
+      type: object
+      required: [status, message, timestamp]
+      properties:
+        status:
+          type: integer
+          example: 400
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Cupom não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InvalidId:
+      description: Identificador informado não é um UUID válido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Cupom já foi removido ou foi modificado por outra operação simultânea
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Erro interno inesperado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
